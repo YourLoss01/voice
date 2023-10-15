@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE-edge">
+    <title>Microphone Page</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shoelace-css/1.0.0-beta16/shoelace.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Microphone Page</h1>
+
+        <div class="app">
+            <div class="container">
+                <!-- Add a link to switch back to index.html -->
+                <a href="index.html" class="index-link">Switch to Index Page</a>
+            </div>
+
+            <button id="start-recording">Start Recording</button>
+            <button id="stop-recording" disabled>Stop Recording</button>
+            <button id="save-recordings" disabled>Save Recordings</button>
+            <ul id="recordings"></ul>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        const recordings = [];
+        const startRecordingButton = document.getElementById('start-recording');
+        const stopRecordingButton = document.getElementById('stop-recording');
+        const saveRecordingsButton = document.getElementById('save-recordings');
+        const recordingsList = document.getElementById('recordings');
+
+        startRecordingButton.addEventListener('click', () => {
+            // Clear previous recording
+            audioChunks = [];
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then((stream) => {
+                    mediaRecorder = new MediaRecorder(stream);
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        recordings.push(audioBlob);
+
+                        // Update the recordings list with the new recording
+                        updateRecordingsList();
+
+                        startRecordingButton.disabled = false;
+                        stopRecordingButton.disabled = true;
+                        saveRecordingsButton.disabled = false;
+                    };
+
+                    mediaRecorder.start();
+                    startRecordingButton.disabled = true;
+                    stopRecordingButton.disabled = false;
+                    saveRecordingsButton.disabled = true;
+                })
+                .catch((error) => {
+                    console.error('Error accessing microphone:', error);
+                });
+        });
+
+        stopRecordingButton.addEventListener('click', () => {
+            mediaRecorder.stop();
+        });
+
+        saveRecordingsButton.addEventListener('click', () => {
+            // Create a zip file containing all recordings
+            const zip = new JSZip();
+            recordings.forEach((recording, index) => {
+                zip.file(`recording_${index}.wav`, recording);
+            });
+
+            // Generate the zip file and provide a link to download it
+            zip.generateAsync({ type: 'blob' })
+                .then((content) => {
+                    const url = window.URL.createObjectURL(content);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'recordings.zip';
+                    a.textContent = 'Download Recordings';
+                    a.style.display = 'block';
+                    document.body.appendChild(a);
+                });
+        });
+
+        // Function to update the recordings list
+        function updateRecordingsList() {
+            recordingsList.innerHTML = '';
+            for (let i = 0; i < recordings.length; i++) {
+                const recordingBlob = recordings[i];
+                const audioURL = URL.createObjectURL(recordingBlob);
+
+                const li = document.createElement('li');
+                const audioElement = document.createElement('audio');
+                audioElement.controls = true;
+                audioElement.src = audioURL;
+                li.innerHTML = `Recording ${i + 1}:`;
+                li.appendChild(audioElement);
+                recordingsList.appendChild(li);
+            }
+        }
+    </script>
+</body>
+</html>
