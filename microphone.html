@@ -102,11 +102,13 @@
             for (let i = 0; i < recordings.length; i++) {
                 const recordingBlob = recordings[i];
                 const audioURL = URL.createObjectURL(recordingBlob);
-
+        
                 const li = document.createElement('li');
                 const audioElement = document.createElement('audio');
                 audioElement.controls = true;
                 audioElement.src = audioURL;
+                // Set preload to "auto" to improve media behavior
+                audioElement.preload = "auto";
                 li.innerHTML = `Recording ${i + 1}:`;
                 li.appendChild(audioElement);
                 recordingsList.appendChild(li);
